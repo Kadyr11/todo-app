@@ -1,0 +1,60 @@
+{
+  "name": "todo-app",
+  "version": "1.0.0",
+  "description": "Full-stack Todo application with React + TypeScript frontend, Node.js + Express + TypeScript backend, PostgreSQL database, containerized with Docker Compose",
+  "main": "index.js",
+  "scripts": {
+    "dev": "docker compose -f docker-compose.dev.yml up --build",
+    "dev:bg": "docker compose -f docker-compose.dev.yml up --build -d",
+    "prod": "docker compose up --build",
+    "prod:bg": "docker compose up --build -d",
+    "start": "docker compose up",
+    "start:prod": "docker compose up --build",
+    "start:dev": "docker compose -f docker-compose.dev.yml up --build",
+    "stop": "docker compose down",
+    "stop:dev": "docker compose -f docker-compose.dev.yml down",
+    "clean": "docker compose down -v && docker system prune -f",
+    "clean:all": "docker compose down -v --rmi all --remove-orphans",
+    "logs": "docker compose logs -f",
+    "logs:dev": "docker compose -f docker-compose.dev.yml logs -f",
+    "check": "./check-system.sh",
+    "install:deps": "./install-macos.sh",
+    "install:backend": "cd backend && npm install",
+    "install:frontend": "cd frontend && npm install",
+    "install:all": "npm run install:backend && npm run install:frontend",
+    "backend:dev": "cd backend && npm run dev",
+    "frontend:dev": "cd frontend && npm run dev",
+    "db:studio": "cd backend && npm run db:studio",
+    "db:migrate": "cd backend && npm run db:migrate",
+    "db:generate": "cd backend && npm run db:generate"
+  },
+  "keywords": [
+    "todo",
+    "react",
+    "typescript",
+    "nodejs",
+    "express",
+    "postgresql",
+    "prisma",
+    "docker",
+    "crud",
+    "full-stack"
+  ],
+  "author": "Todo App Developer",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/todo-app.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-username/todo-app/issues"
+  },
+  "homepage": "https://github.com/your-username/todo-app#readme",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

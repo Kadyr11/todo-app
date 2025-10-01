@@ -1,0 +1,1313 @@
+/*
+ * Нюансы для адаптивного дизайна FHD/4K:
+ * 1. Не гонимся за 100% ширины. Даем глазу «опору»: ограничиваем основной контейнер (--container-max)
+ *    и текстовые блоки (--measure) для лучшей читаемости.
+ * 2. Флюидность важнее лесенки брейкпоинтов. clamp() убирает нужду в десятках media-query.
+ * 3. Хит-таргеты: минимум 44×44px на инпутах/кнопках (особенно критично на 4K).
+ * 4. Сетки: repeat(auto-fit, minmax(320–360px, 1fr)) — карточки сами размножаются
+ *    на широких экранах без дополнительных правил.
+ * 5. Чекбоксы на 4K увеличены через transform: scale для лучшей доступности.
+ * 6. High-DPI медиа-запросы не используются для layout. Они нужны только для растровых иконок.
+ */
+
+/* базовые токены */
+:root {
+  /* База под ноутбуки/десктопы */
+  --fs-base: clamp(14px, 0.9vw, 18px);
+  --fs-h1: clamp(24px, 2.6vw, 36px);
+  --fs-h2: clamp(20px, 2.0vw, 28px);
+  --space-1: clamp(8px, 0.6vw, 14px);
+  --space-2: clamp(12px, 1.0vw, 20px);
+  --space-3: clamp(16px, 1.4vw, 28px);
+  --radius: 14px;
+
+  /* Ширина контейнера растёт плавно, но не бесконечно */
+  --container-max: 1600px;       /* комфортно на 1920 */
+  --container-padding: clamp(12px, 2vw, 32px);
+
+  /* Длина строки для текстовых блоков */
+  --measure: 72ch; /* 65–80ch — золото */
+
+  color-scheme: light;
+  --bg: #ffffff;
+  --fg: #111111;
+  --muted: #6b7280;
+  --card: #f8f9fa;
+  --border: #e5e7eb;
+
+  --accent: #3b82f6;
+
+  --success-bg: #d1fae5;
+  --success-border: #10b981;
+  --warn-bg: #fef9c3;
+  --warn-border: #eab308;
+  --danger-bg: #fee2e2;
+  --danger-border: #ef4444;
+}
+
+/* тёмная */
+[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #111827;
+  --fg: #e5e7eb;
+  --muted: #9ca3af;
+  --card: #1f2937;
+  --border: #374151;
+
+  --accent: #60a5fa;
+
+  --success-bg: #064e3b;
+  --success-border: #10b981;
+  --warn-bg: #78350f;
+  --warn-border: #f59e0b;
+  --danger-bg: #7f1d1d;
+  --danger-border: #ef4444;
+}
+
+/* системная тема */
+@media (prefers-color-scheme: dark) {
+  [data-theme="system"] {
+    color-scheme: dark;
+    --bg: #111827;
+    --fg: #e5e7eb;
+    --muted: #9ca3af;
+    --card: #1f2937;
+    --border: #374151;
+    
+    --accent: #60a5fa;
+    
+    --success-bg: #064e3b;
+    --success-border: #10b981;
+    --warn-bg: #78350f;
+    --warn-border: #f59e0b;
+    --danger-bg: #7f1d1d;
+    --danger-border: #ef4444;
+  }
+}
+
+@media (prefers-color-scheme: light) {
+  [data-theme="system"] {
+    color-scheme: light;
+    --bg: #ffffff;
+    --fg: #111111;
+    --muted: #6b7280;
+    --card: #f8f9fa;
+    --border: #e5e7eb;
+    
+    --accent: #3b82f6;
+    
+    --success-bg: #d1fae5;
+    --success-border: #10b981;
+    --warn-bg: #fef9c3;
+    --warn-border: #eab308;
+    --danger-bg: #fee2e2;
+    --danger-border: #ef4444;
+  }
+}
+
+/* Универсально: чтобы бордеры/паддинги считались как надо */
+*, *::before, *::after{ box-sizing: border-box; }
+
+/* базовые элементы */
+html { font-size: 100%; }
+html, body { height: 100%; }
+body { 
+  margin: 0; 
+  background: var(--bg); 
+  color: var(--fg); 
+  font-size: var(--fs-base);
+  line-height: 1.5;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; 
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Кнопки и инпуты наследуют шрифт/высоту строки */
+button, input, select{
+  font: inherit;
+  line-height: 1.2;
+}
+h1 { font-size: var(--fs-h1); line-height: 1.15; margin-top: 0; }
+h2 { font-size: var(--fs-h2); line-height: 1.2; }
+
+.input, button {
+  background: var(--card);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-1) var(--space-2);
+  outline: none;
+  font-size: var(--fs-base);
+}
+
+/* Контейнер для селекта */
+.select-wrap{
+  position: relative;
+}
+
+/* Сам select – кроссбраузерный ресет */
+.select{
+  -webkit-appearance: none;
+  appearance: none;
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-1) calc(var(--space-2) * 2) var(--space-1) var(--space-2); /* важно: справа > 40px под стрелку */
+  width: 100%;
+  line-height: 1.2;
+  color: var(--fg);
+  outline: none;
+  font-size: var(--fs-base);
+  background-clip: padding-box; /* чтобы фон не «залазил» под бордер */
+}
+
+/* Кастомная стрелка (svg) */
+.select-wrap::after{
+  content: "";
+  position: absolute;
+  right: 16px;                /* отступ от скругления */
+  top: 50%;
+  transform: translateY(-50%);
+  width: 12px;
+  height: 12px;
+  pointer-events: none;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 12px 12px;
+  /* белая галочка; при тёмной теме хорошо видна */
+  background-image: url("data:image/svg+xml;utf8,\
+  <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23E6E6E6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+}
+
+/* Safari иногда рисует свою стрелку — подстрахуемся */
+@supports (-webkit-touch-callout: none){
+  .select{ background-image: none !important; }
+}
+.button, button { cursor: pointer; }
+.button { transition: background .15s ease, border-color .15s ease; }
+.button:hover { filter: brightness(1.05); }
+.button.primary { background: var(--accent); color: white; border-color: var(--accent); }
+.button.compact { padding: calc(var(--space-1) * 0.5) var(--space-1); font-size: 0.85rem; }
+
+.btn-outline { background: transparent; border: 1px solid var(--border); color: var(--fg); }
+
+/* Home button: small house glyph + text, used in headers/panels */
+.button.home {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: var(--space-1) var(--space-2);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--fg);
+  font-weight: 600;
+  box-sizing: border-box;
+}
+.button.home::before{
+  content: "";
+  display:inline-block;
+  width:16px; height:16px;
+  flex: 0 0 16px;
+  box-sizing: border-box;
+  margin-right: 6px;
+  /* Use mask so glyph color follows currentColor reliably */
+  background-color: currentColor;
+  -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M3 9.5L12 3l9 6.5V21a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V9.5z' fill='black'/></svg>") no-repeat center / 16px 16px;
+  mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M3 9.5L12 3l9 6.5V21a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V9.5z' fill='black'/></svg>") no-repeat center / 16px 16px;
+}
+.button.home:hover{ background: rgba(0,0,0,0.03); }
+.button.home:focus{ outline: 3px solid rgba(59,130,246,0.18); outline-offset: 2px; }
+
+/* Make two buttons visually equal (used on panels where buttons should match) */
+.btn-equal {
+  /* Make visually equal buttons: fixed padding and min-height to override compact/home specifics */
+  padding: 8px 14px;
+  min-height: 44px;
+  border-radius: 10px;
+  font-weight: 600;
+  align-items: center;
+  display: inline-flex;
+}
+
+/* Ensure compact + home variants that also have btn-equal respect the 44px height */
+.button.compact.btn-equal,
+.button.compact.home.btn-equal {
+  padding: 8px 14px; /* override more specific compact/home padding */
+  min-height: 44px !important; /* force to win against other specific rules */
+  box-sizing: border-box;
+}
+
+/* Compact variant: used in tight panels (deleted panel, headers) */
+.button.compact.home{
+  padding: 6px 10px;
+  font-size: 0.82rem;
+  min-height: 32px;
+  border-radius: 8px;
+}
+
+/* Make home button more visible in very dark backgrounds: slight translucent fill and stronger border */
+[data-theme="dark"] .button.home{
+  background: rgba(255,255,255,0.02);
+  border-color: rgba(255,255,255,0.06);
+}
+
+/* Ensure text doesn't wrap and baseline alignment is steady */
+.button.home { white-space: nowrap; align-items: center; }
+
+/* Улучшенные хит-таргеты для сенсорных устройств и больших разрешений */
+.input, .select, .button {
+  min-height: 44px; /* Минимальный размер для удобных хит-таргетов */
+}
+
+/* Улучшенные чекбоксы для высоких разрешений */
+input[type="checkbox"] { 
+  transform: scale(1.15); 
+  transform-origin: center; 
+}
+
+/* Карточка */
+.card { 
+  padding: var(--space-2);
+  border-radius: var(--radius);
+  border: 1px solid var(--border, rgba(0,0,0,.1));
+  background: var(--card, var(--surface, #fff));
+}
+
+.app {
+  min-height: 100dvh;
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+/* 1) Отступ сверху для всей страницы */
+.app, .page, .container-root{
+  /* выбери тот, который оборачивает весь контент; можно оставить все три */
+  padding-top: clamp(16px, 3vh, 32px);   /* на больших экранах до ~32px, на 4K выглядит гармонично */
+}
+
+.container {
+  width: min(96vw, var(--container-max));
+  margin-inline: auto;
+  padding-inline: var(--container-padding);
+  box-sizing: border-box;
+}
+
+/* Текстовые блоки/описания, чтобы на 4K не растягивались на 200 символов */
+.prose { 
+  max-width: var(--measure); 
+  width: 100%;
+}
+
+/* Гибкая сетка дел + авто-подбор колонок */
+.todos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--space-2);
+}
+
+/* Форма создания задачи: 1–3 колонки по месту */
+.form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-2);
+}
+
+.input, .select, .button { font-size: 1rem; } /* наследует из --fs-base */
+
+.todo-item {
+  display: grid;
+  grid-template-columns: minmax(24px, 32px) 1fr auto;
+  gap: var(--space-1);
+  align-items: start;
+}
+
+.todo-content {
+  overflow-wrap: break-word;
+  word-break: break-word;
+  padding: var(--space-1) 0;
+}
+
+.todo-title {
+  font-weight: 600;
+  margin-bottom: calc(var(--space-1) * 0.5);
+}
+
+.todo-description {
+  font-size: 0.9rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: clamp(12px, 1.5vh, 24px); /* Улучшенный отступ снизу */
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* Custom header spacing token */
+:root { --header-gap: 40px; }
+
+.header{
+  /* Шапка: 40px сверху, 40px над линией, 1px линия, 40px после линии */
+  padding-top: var(--header-gap);
+  padding-bottom: var(--header-gap) !important;  /* перекрываем ранние padding/padding-block */
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  margin-bottom: var(--header-gap);
+}
+
+/* если реально добавляли псевдоэлемент — отключаем, чтобы не было второй линии */
+.header::after{ content: none !important; }
+
+/* следующий блок не должен добавлять свой верхний margin */
+.header + * { margin-top: 0 !important; }
+
+/* Шапка с заголовком */
+.header-title{
+  display: flex;
+  align-items: center;        /* вертикальное выравнивание */
+  gap: 12px;
+  margin: 0; /* Стабилизация строки заголовка */
+}
+
+.header-title img,
+.header-title .emoji{
+  width: 36px;                /* подгони под свой размер */
+  height: 36px;
+  display: block;             /* убираем влияние базовой линии */
+  object-fit: contain;
+}
+
+/* 2) В заголовке оставить только одну иконку */
+/* Вариант A: у тебя иконки — эмодзи в span */
+.header-title .emoji:first-child{ display: none; }   /* скрываем первую, остаётся вторая */
+
+/* Вариант B: у тебя иконки — <img> */
+.header-title img:first-of-type{ display: none; }    /* скрыть левую картинку, оставить вторую */
+
+/* Более специфичное правило для гарантированного скрытия первой иконки */
+h1 .emoji:first-child, h1 img:first-of-type{ display: none; }
+
+/* На всякий случай стабилизируем строку заголовка */
+.header-title span.title-text{ line-height: 1.15; }
+
+/* чтобы шрифт не «прыгнул» на крупных размерах */
+h1{
+  line-height: 1.15;
+  margin: 0;
+}
+
+h1 .emoji {
+  display: inline-block;
+  width: 36px; height: 36px;
+  vertical-align: middle;
+  object-fit: contain;
+  transform: translateY(2px);
+}
+
+h1 .title-text { line-height: 1.15; }
+
+/* Увеличение размера заголовка приложения "Список задач" */
+.header-title .title-text,
+h1.header-title,
+.header-title,
+.header-title .header-title-text {
+  font-size: 36px !important;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.banner { 
+  padding: var(--space-1); 
+  text-align: center; 
+  border-radius: calc(var(--radius) * 0.6); 
+  border: 1px solid var(--border);
+  margin-bottom: var(--space-2);
+  margin-top: 8px; /* Добавляем верхний отступ для плашки статуса */
+}
+.banner.ok   { background: var(--success-bg); border-color: var(--success-border); }
+.banner.warn { background: var(--warn-bg);    border-color: var(--warn-border); }
+.banner.err  { background: var(--danger-bg);  border-color: var(--danger-border); }
+
+/* ≥1440 — чуть расширим контейнер */
+@media (min-width: 1440px){
+  :root{ --container-max: 1680px; }
+}
+
+/* ≥1920 (FHD) — комфорт на телевизорах/больших мониторах */
+@media (min-width: 1920px){
+  :root{
+    --fs-base: clamp(16px, 0.85vw, 20px);
+    --fs-h1: clamp(32px, 2.2vw, 44px);
+    --fs-h2: clamp(24px, 1.8vw, 32px);
+    --container-max: 1760px;     /* контент не разлетается по краям */
+    --space-1: clamp(10px, 0.5vw, 16px);
+    --space-2: clamp(14px, 0.8vw, 24px);
+    --space-3: clamp(18px, 1.2vw, 32px);
+  }
+}
+
+/* ≥2560 (2K/2.5K) — можно добавить колонку и ширину */
+@media (min-width: 2560px){
+  :root{ --container-max: 1920px; }
+  .todos{
+    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  }
+}
+
+/* ≥3840 (4K) — не увеличиваем бесконечно, сохраняем читабельность */
+@media (min-width: 3840px){
+  :root{
+    --fs-base: clamp(18px, 0.7vw, 22px);
+    --fs-h1: clamp(36px, 2vw, 52px);
+    --container-max: 2100px;  /* остаётся «островок» UI в центре */
+  }
+}
+
+/* Мобилки */
+@media (max-width: 480px){
+  .container{ width: 100%; padding-inline: 14px; }
+  .form{ grid-template-columns: 1fr; }
+  .input, .select, .button{ width: 100%; }
+}
+
+/* Планшеты */
+@media (min-width: 481px) and (max-width: 768px){
+  .form{ grid-template-columns: repeat(2, 1fr); }
+  .form .button{ grid-column: 1 / -1; }
+}
+
+/* Макет с боковой панелью */
+.layout{
+  display: grid;
+  grid-template-columns: 320px 1fr; /* панель + контент */
+  gap: var(--space-3);
+}
+@media (max-width: 1024px){
+  .layout{ grid-template-columns: 1fr; } /* панель уезжает вверх/вниз */
+}
+
+/* Стили для календаря */
+.calendar-view .react-calendar {
+  width: 100%;
+  max-width: 100%;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-family: inherit;
+  line-height: 1.125em;
+}
+
+.calendar-view .react-calendar--doubleView {
+  width: 700px;
+}
+
+.calendar-view .react-calendar--doubleView .react-calendar__viewContainer {
+  display: flex;
+  margin: -0.5em;
+}
+
+.calendar-view .react-calendar--doubleView .react-calendar__viewContainer > * {
+  width: 50%;
+  margin: 0.5em;
+}
+
+.calendar-view .react-calendar,
+.calendar-view .react-calendar *,
+.calendar-view .react-calendar *:before,
+.calendar-view .react-calendar *:after {
+  -moz-box-sizing: border-box;
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+}
+
+.calendar-view .react-calendar button {
+  margin: 0;
+  border: 0;
+  outline: none;
+}
+
+.calendar-view .react-calendar button:enabled:hover {
+  cursor: pointer;
+}
+
+.calendar-view .react-calendar__navigation {
+  display: flex;
+  height: 44px;
+  margin-bottom: 1em;
+}
+
+.calendar-view .react-calendar__navigation button {
+  min-width: 44px;
+  background: none;
+  font-size: var(--fs-base);
+  margin-top: 8px;
+}
+
+.calendar-view .react-calendar__navigation button:disabled {
+  background-color: var(--muted);
+}
+
+.calendar-view .react-calendar__navigation button:enabled:hover,
+.calendar-view .react-calendar__navigation button:enabled:focus {
+  background-color: var(--accent);
+  color: white;
+}
+
+.calendar-view .react-calendar__month-view__weekdays {
+  text-align: center;
+  text-transform: uppercase;
+  font-weight: bold;
+  font-size: 0.75em;
+  color: var(--muted);
+}
+
+.calendar-view .react-calendar__month-view__weekdays__weekday {
+  padding: 0.5em;
+  abbr {
+    text-decoration: none;
+  }
+}
+
+.calendar-view .react-calendar__month-view__weekNumbers .react-calendar__tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75em;
+  font-weight: bold;
+  color: var(--muted);
+}
+
+.calendar-view .react-calendar__month-view__days__day--weekend {
+  color: var(--danger-border);
+}
+
+.calendar-view .react-calendar__month-view__days__day--neighboringMonth {
+  color: var(--muted);
+}
+
+.calendar-view .react-calendar__tile {
+  max-width: 100%;
+  padding: 0.75em 0.5em;
+  background: none;
+  text-align: center;
+  line-height: 16px;
+  font-size: var(--fs-base);
+  color: var(--fg);
+}
+
+.calendar-view .react-calendar__tile:disabled {
+  background-color: var(--muted);
+  color: var(--muted);
+}
+
+.calendar-view .react-calendar__tile:enabled:hover,
+.calendar-view .react-calendar__tile:enabled:focus {
+  background-color: var(--accent);
+  color: white;
+}
+
+.calendar-view .react-calendar__tile--now {
+  background: var(--warn-bg);
+  color: var(--warn-border);
+}
+
+.calendar-view .react-calendar__tile--now:enabled:hover,
+.calendar-view .react-calendar__tile--now:enabled:focus {
+  background: var(--warn-bg);
+  color: var(--warn-border);
+}
+
+.calendar-view .react-calendar__tile--hasActive {
+  background: var(--accent);
+  color: white;
+}
+
+.calendar-view .react-calendar__tile--hasActive:enabled:hover,
+.calendar-view .react-calendar__tile--hasActive:enabled:focus {
+  background: var(--accent);
+  color: white;
+}
+
+.calendar-view .react-calendar__tile--active {
+  background: var(--accent);
+  color: white;
+}
+
+.calendar-view .react-calendar__tile--active:enabled:hover,
+.calendar-view .react-calendar__tile--active:enabled:focus {
+  background: var(--accent);
+  color: white;
+}
+
+.calendar-view .react-calendar--selectRange .react-calendar__tile--hover {
+  background-color: var(--accent);
+  color: white;
+}
+
+.calendar-tile-content {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.calendar-dot {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 6px;
+  height: 6px;
+  background-color: var(--accent);
+  border-radius: 50%;
+}
+
+.calendar-count {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  font-size: 0.7em;
+  color: var(--accent);
+  font-weight: bold;
+}
+
+.calendar-day-group {
+  margin-bottom: var(--space-3);
+}
+
+.calendar-todo-item {
+  transition: all 0.2s ease;
+}
+
+.calendar-todo-item:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.view-mode-toggle {
+  display: flex;
+  gap: var(--space-1);
+  justify-content: center;
+}
+
+.view-mode-toggle .btn {
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--fg);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.view-mode-toggle .btn.primary {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+.view-mode-toggle .btn.secondary:hover {
+  background: var(--border);
+}
+
+/* Sidebar Styles */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 280px;
+  height: 100vh;
+  background: var(--card);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
+  z-index: 1000;
+}
+
+.sidebar.open {
+  transform: translateX(0);
+}
+
+.sidebar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .sidebar-overlay {
+    display: block;
+  }
+}
+
+.sidebar-header {
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sidebar-title {
+  font-size: var(--fs-h2);
+  margin: 0;
+  color: var(--fg);
+}
+
+.sidebar-content {
+  flex: 1;
+  padding: var(--space-2);
+}
+
+.project-group {
+  margin-bottom: var(--space-2);
+}
+
+.project-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.project-header:hover {
+  background: var(--border);
+}
+
+.project-header.selected {
+  background: var(--accent);
+  color: white;
+}
+
+.project-header.selected .project-color {
+  background: rgba(255, 255, 255, 0.3) !important;
+}
+
+.project-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+}
+
+.project-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.project-name {
+  font-weight: 500;
+  flex: 1;
+}
+
+.project-count {
+  font-size: 0.8em;
+  color: var(--muted);
+}
+
+/* Quick action buttons in sidebar (Deleted / Archived) */
+.quick-actions {
+  display: grid;
+  grid-template-columns: 1fr; /* vertical stack: one per row */
+  gap: 10px;
+  align-items: stretch;
+}
+
+.quick-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start; /* left-align content for vertical cards */
+  padding: 14px 12px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--fg);
+  text-decoration: none;
+  font-weight: 600;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 52px;
+  transition: background 0.15s ease, box-shadow 0.12s ease;
+}
+
+.quick-action:hover,
+.quick-action:focus {
+  background: rgba(0,0,0,0.03);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+}
+
+@media (max-width: 480px) {
+  .quick-actions { grid-template-columns: 1fr; }
+}
+
+.project-actions {
+  display: flex;
+  gap: var(--space-1);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.project-header:hover .project-actions {
+  opacity: 1;
+}
+
+/* Скрыть все дубликаты "Архивировать", оставить только первую кнопку */
+.project-actions .icon-btn[aria-label="Архивировать"]:not(:first-of-type),
+.project-actions .icon-btn[title="Архивировать"]:not(:first-of-type){
+  display: none !important;
+}
+
+.button.icon {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+.sections-list {
+  margin-left: var(--space-3);
+  margin-top: var(--space-1);
+}
+
+.section-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  margin-bottom: 2px;
+}
+
+.section-item:hover {
+  background: var(--border);
+}
+
+.section-item.selected {
+  background: var(--accent);
+  color: white;
+}
+
+.section-name {
+  flex: 1;
+}
+
+.section-count {
+  font-size: 0.8em;
+  opacity: 0.7;
+}
+
+.archived-section {
+  margin-top: var(--space-3);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border);
+}
+
+.deleted-panel {
+  margin: var(--space-2) 0;
+}
+.deleted-panel h3 {
+  margin: 0 0 var(--space-2) 0;
+}
+.deleted-item + .deleted-item {
+  margin-top: var(--space-2);
+}
+
+/* Position cleanup button in the top-right of deleted panel and make it compact */
+.deleted-panel {
+  position: relative; /* allow absolute positioning for actions */
+  padding-top: calc(var(--space-2) + 6px); /* give space for absolute button */
+}
+
+.deleted-panel .deleted-panel-actions {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  display: flex;
+  gap: 8px;
+  z-index: 2;
+}
+
+/* Override global min-height for compact buttons inside deleted panel */
+.deleted-panel .button.compact {
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  min-height: 32px; /* smaller hit target inside panel */
+  border-radius: 10px;
+}
+
+/* Danger variant: subtle background and border to match dark theme */
+.deleted-panel .button.danger {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--fg);
+}
+
+.archived-title {
+  font-size: 0.9em;
+  color: var(--muted);
+  margin-bottom: var(--space-2);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.project-header.archived {
+  opacity: 0.6;
+}
+
+.project-header.archived:hover {
+  opacity: 0.8;
+}
+
+.sidebar-actions {
+  display: flex;
+  gap: var(--space-1);
+  align-items: center;
+}
+
+.close-button {
+  background: transparent !important;
+  border: none !important;
+  color: var(--muted);
+  font-size: 18px;
+}
+
+.close-button:hover {
+  color: var(--fg);
+  background: var(--border) !important;
+}
+
+.header{
+  display: grid;
+  grid-template-columns: 56px 1fr 56px; /* меню | центр | настройки */
+  align-items: center;
+  gap: 16px;
+
+  /* равные отступы сверху и снизу */
+  padding-block: 16px;        /* = padding-top + padding-bottom */
+  padding-inline: 24px;
+
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.header-title{
+  justify-self: center;
+  font-size: 22px; font-weight: 800; letter-spacing: .2px;
+  margin: 0; white-space: nowrap;
+  text-align: center;
+}
+
+/* Универсальная круглая кнопка */
+.icon-btn{
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.12);
+  box-sizing: border-box;
+
+  display: grid;
+  place-items: center;
+
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  line-height: 0;      /* <— убираем влияние базовой линии */
+  font-size: 36px;     /* <— размер бургера по умолчанию */
+}
+
+/* make icon-btn positioned so .bars pseudo-elements are placed correctly */
+.icon-btn{
+  width:56px; height:56px;
+  border-radius:50%;
+  border:1px solid rgba(255,255,255,.12);
+  background:transparent;
+  box-sizing:border-box;
+  position:relative;       /* ⬅ нужно для абсолютного центрования */
+  padding:0; margin:0; line-height:0;
+  display:block;           /* display:grid/place-items не требуется */
+}
+
+/* Контейнер полосок ровно в центре круга */
+.icon-btn .burger,
+.icon-btn .burger::before,
+.icon-btn .burger::after{
+  content:"";
+  position:absolute;
+  left:50%; top:50%;
+  width:22px; height:2px;              /* длина и толщина полоски */
+  background:currentColor;
+  border-radius:2px;
+  transform:translate(-50%, -50%);     /* идеальный центр */
+}
+
+/* Верхняя и нижняя полоски отступают от центральной */
+.icon-btn .burger::before{
+  transform:translate(-50%, -50%) translateY(-6px);
+}
+.icon-btn .burger::after{
+  transform:translate(-50%, -50%) translateY( 6px);
+}
+
+.icon-btn { --nudge-y: -1%; }
+.icon-btn > * { transform: translateY(var(--nudge-y)); }
+
+/* Если справа иконка должна быть меньше — задаём отдельный класс */
+.settings-btn{ font-size: 32px; }
+@media (max-width: 640px) {
+  .brand-mark { display: none; }     /* ещё меньше шума на мобилке */
+  .header-title { font-size: 18px; } /* аккуратнее на узких экранах */
+  .header {
+    padding-block: 12px;
+    padding-inline: 16px;
+    grid-template-columns: 48px 1fr 48px;
+  }
+  .icon-btn { 
+    width: 48px; 
+    height: 48px; 
+  }
+}
+
+/* Main content layout */
+.app {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  width: 100%;
+}
+
+/* чтобы внутри тайла можно было рисовать оверлеи/маркеры */
+.react-calendar__tile { position: relative; }
+
+/* маркер «есть заметки» */
+.cal-notes__dot{
+  position:absolute; bottom:6px; left:50%; transform:translateX(-50%);
+  width:6px; height:6px; border-radius:50%;
+  background:#7FB3FF; pointer-events:none; z-index:1;
+}
+
+/* контур «важный день» (не конфликтует с твоим active/now) */
+.cal-notes__outline{
+  position:absolute; inset:4px; border:1px solid rgba(127,179,255,.6);
+  border-radius:12px; pointer-events:none; z-index:1;
+}
+
+/* прозрачный кликабельный слой — гарантирует открытие редактора */
+.cal-notes__overlay{
+  position:absolute; inset:0; z-index:2;
+  display:block;
+  cursor:pointer;
+  background:transparent;
+  /* pointer-events по умолчанию auto — оставляем, чтобы ловить клик */
+}
+
+/* модалка */
+.cal-notes__modal{ position:fixed; inset:0; }
+.cal-notes__backdrop{ position:absolute; inset:0; background:rgba(0,0,0,.35); }
+.cal-notes__panel{
+  position:absolute; left:0; right:0; bottom:0; margin:0 auto; max-width:720px;
+  background:#111926; color:#E7ECF1; border-top-left-radius:16px; border-top-right-radius:16px;
+  box-shadow:0 -8px 24px rgba(0,0,0,.35); padding:16px;
+}
+.cal-notes__head{ display:flex; align-items:center; gap:12px; }
+.cal-notes__date{ font-weight:700; flex:1; }
+.cal-notes__important{ display:flex; align-items:center; gap:8px; opacity:.9; }
+.cal-notes__close{ background:transparent; border:none; font-size:18px; color:#93A1B3; }
+.cal-notes__list{ list-style:none; padding:0; margin:12px 0; display:grid; gap:8px; }
+.cal-notes__list li{ display:flex; gap:12px; align-items:flex-start; background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.06); border-radius:10px; padding:10px 12px; }
+.cal-notes__del{ margin-left:auto; background:transparent; border:1px solid rgba(255,255,255,.12);
+  border-radius:8px; padding:4px 8px; color:#FFB4B4; }
+.cal-notes__add{ display:grid; gap:8px; }
+.cal-notes__add textarea{ width:100%; resize:vertical; min-height:72px; background:#0E1623; color:#E7ECF1;
+  border:1px solid rgba(255,255,255,.12); border-radius:10px; padding:10px 12px; }
+.cal-notes__addbtn{ justify-self:end; padding:8px 14px; border-radius:10px; background:#5A85FF; border:none; color:#fff; font-weight:600; }
+
+/* 1) Тайлы кликабельные, можем рисовать поверх маркеры */
+.react-calendar__tile { position: relative; }
+
+/* Маркеры — без перехвата кликов */
+.cal-notes__dot,
+.cal-notes__outline { pointer-events: none; }
+
+/* 3) На всякий случай: убедимся, что календарь не «замьючен» */
+.react-calendar { pointer-events: auto; }
+
+/* Стили для нового модала заметок */
+/* Привязываем стили именно к твоему календарю */
+
+/* простая модалка */
+.notes-modal{ display:none; }
+.notes-modal.open{ display:block; }
+.notes-modal .overlay{
+  position: fixed; inset: 0; background: rgba(0,0,0,.35);
+  z-index: 1000;
+}
+.notes-modal .panel{
+  position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  max-width: 720px; width: 90vw;
+  background: #111926; color: #E7ECF1;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.5);
+  padding: 16px;
+  z-index: 1001;
+}
+.panel-head{ display:flex; align-items:center; gap:12px; }
+.panel-head .date{ font-weight: 700; flex: 1; }
+.panel-head .important{ display:flex; align-items:center; gap:8px; opacity:.9; }
+.panel-head .close{ background:transparent; border:none; font-size:18px; color:#93A1B3; cursor: pointer; }
+
+.notes-list{ list-style:none; padding:0; margin:12px 0; display:grid; gap:8px; }
+.notes-list li{
+  display:flex; gap:12px; align-items:flex-start;
+  background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.06);
+  border-radius: 10px; padding: 10px 12px;
+}
+.notes-list .del{
+  margin-left:auto; background:transparent; border:1px solid rgba(255,255,255,.12);
+  border-radius:8px; padding:4px 8px; color:#FFB4B4; cursor: pointer;
+}
+
+.add-row{ display:grid; gap:8px; }
+.add-row textarea{
+  width:100%; resize:vertical; min-height:72px;
+  background:#0E1623; color:#E7ECF1; border:1px solid rgba(255,255,255,.12);
+  border-radius:10px; padding:10px 12px;
+}
+.add-row .add-btn{
+  justify-self:end; padding:8px 14px; border-radius:10px;
+  background:#5A85FF; border:none; color:white; font-weight:600; cursor: pointer;
+}
+
+/* единые вертикальные отступы для всей шапки */
+.app-header {
+  display: grid;
+  grid-template-columns: 56px 1fr 56px; /* меню | центр | настройки */
+  align-items: center;
+  gap: 16px;
+
+  /* равные отступы сверху и снизу */
+  padding-block: 16px;        /* = padding-top + padding-bottom */
+  padding-inline: 24px;
+}
+
+/* кнопки одинакового размера */
+.app-header .icon-btn {
+  inline-size: 56px;          /* width */
+  block-size: 56px;           /* height */
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,.1);
+  background: transparent;
+}
+
+/* Glyph inside icon buttons (settings gear) */
+.icon-btn .glyph{
+  display:inline-block; line-height:1; font-size:24px;
+  transform: translate(-0.5px, 0.5px); /* подгони на глаз */
+  -webkit-font-smoothing: antialiased; text-rendering: geometricPrecision;
+}
+
+/* убираем дефолтный внешний отступ заголовка,
+   чтобы не ломал симметрию */
+.app-header h1 {
+  margin: 0;
+  line-height: 1;             /* чтобы текст не растягивал высоту */
+  text-align: center;
+  font-weight: 700;
+}
+
+/* Hide small ok banners used for dev messages */
+.banner.ok { 
+  display: none !important;
+}
+
+/* адаптив (по желанию) */
+@media (max-width: 640px) {
+  .app-header {
+    padding-block: 12px;
+    padding-inline: 16px;
+    grid-template-columns: 48px 1fr 48px;
+  }
+  .app-header .icon-btn { inline-size: 48px; block-size: 48px; }
+}
+
+.hidden { display: none !important; }
+
+/* тайл — контейнер для наших слоёв */
+.custom-calendar .react-calendar__tile { position: relative; }
+
+/* обёртка, чтобы не путаться с абсолютами */
+.cal-notes__wrap { position: absolute; inset: 0; }
+
+/* маркеры не перехватывают клики */
+.cal-notes__dot,
+.cal-notes__outline {
+  position: absolute;
+  z-index: 1;
+  pointer-events: none;
+}
+.cal-notes__dot {
+  bottom: 6px; left: 50%; transform: translateX(-50%);
+  width: 6px; height: 6px; border-radius: 50%; background: #7FB3FF;
+}
+.cal-notes__outline {
+  inset: 4px; border: 1px solid rgba(127,179,255,.6); border-radius: 12px;
+}
+
+/* кликабельный прозрачный слой (НЕ button) */
+.cal-notes__overlay {
+  position: absolute; inset: 0; z-index: 2;
+  display: block; cursor: pointer; background: transparent;
+}
+
+/* Ensure settings panel is above overlays and receives pointer events */
+.settings-panel {
+  z-index: 1100 !important;
+  pointer-events: auto !important;
+}
+
+/* Lightweight breadcrumb helpers (in case Tailwind isn't present) */
+.mb-3 { margin-bottom: var(--space-2); }
+.flex { display: flex; }
+.items-center { align-items: center; }
+.gap-2 { gap: 8px; }
+.text-sm { font-size: 0.9rem; }
+.opacity-80 { opacity: 0.8; }
+.opacity-40 { opacity: 0.4; }
+.hover\:opacity-100:hover { opacity: 1; }
+.underline-offset-2 { text-underline-offset: 2px; }
+.hover\:underline:hover { text-decoration: underline; }
+.font-medium { font-weight: 600; }
+.underline { text-decoration: underline; }
+.mb-4 { margin-bottom: calc(var(--space-2) + 4px); }
+
+.mb-3 a { color: var(--accent); text-decoration: none; }
+.mb-3 a:hover { text-decoration: underline; }
