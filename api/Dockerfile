@@ -1,31 +1,55 @@
-FROM node:20 AS deps
+# ---------- builder ----------
+FROM node:20-alpine AS builder
 WORKDIR /app
-# copy project early so prisma schema is present when generating client
-COPY . .
 
-# install system utilities prisma may need to fetch native engines
-RUN apt-get update -y && apt-get install -y curl ca-certificates xz-utils --no-install-recommends && rm -rf /var/lib/apt/lists/*
+COPY package*.json ./
+RUN npm ci
 
-# install all dependencies (including dev) and avoid permission issues
-RUN npm ci --unsafe-perm
+# copy prisma early
+COPY prisma ./prisma
 
-# ensure binaries in node_modules are executable (fixes "prisma: Permission denied")
-RUN if [ -d ./node_modules/.bin ]; then chmod -R a+rx ./node_modules/.bin || true; fi
+COPY tsconfig*.json ./
+COPY src ./src
 
-# generate Prisma client
+# generate prisma client
 RUN npx prisma generate
 
-# build the project
-RUN npm run build
-RUN ls -la dist/
+# build ts
+RUN npx tsc -b
 
-FROM node:20-slim
+# ---------- runtime ----------
+FROM node:20-alpine AS runtime
 WORKDIR /app
-RUN apt-get update -y && apt-get install -y openssl curl ca-certificates --no-install-recommends && rm -rf /var/lib/apt/lists/*
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/dist ./dist
-COPY --from=deps /app/prisma ./prisma
+
+# OS deps
+RUN apk add --no-cache openssl wget
+
+# copy package and install production deps only
 COPY package*.json ./
+RUN npm ci --omit=dev
+
+# copy built artifacts
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/prisma ./prisma
+
+# copy generated prisma client artifacts
+RUN mkdir -p node_modules
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder /app/node_modules/@prisma/client ./node_modules/@prisma/client
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+
+# entrypoint
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# Set ownership to node user
+RUN chown -R node:node /app
+
 ENV NODE_ENV=production
 EXPOSE 3001
+
+# run as non-root
+USER node
+
+ENTRYPOINT ["sh", "/usr/local/bin/docker-entrypoint.sh"]
 CMD ["node", "dist/src/index.js"]

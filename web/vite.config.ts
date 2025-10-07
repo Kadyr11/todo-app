@@ -17,11 +17,11 @@ export default defineConfig(({ mode }) => {
 
   return {
     server: {
-      host: true,    // 0.0.0.0 (для работы в контейнере)
+      host: true,    // 0.0.0.0 (для работы в контейнере и мобильного доступа)
       port: 5173,
       hmr: {
-        host: 'localhost',   // что видит браузер
-        clientPort: 5173,    // используем тот же порт для HMR
+        host: '192.168.0.100',   // ваш локальный IP для мобильного доступа
+        clientPort: 5173,        // используем тот же порт для HMR
         protocol: 'ws'
       },
       proxy: {

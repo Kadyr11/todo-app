@@ -1,44 +1,59 @@
 services:
   db:
-    image: postgres:16
+    image: postgres:15-alpine
     environment:
-      POSTGRES_DB: todo
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: todo
     volumes:
       - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   api:
     build:
       context: ./api
+      dockerfile: Dockerfile
     environment:
-      DATABASE_URL: postgres://postgres:postgres@db:5432/todo
-      PGHOST: db
-      PGPORT: 5432
-      PGUSER: postgres
-      PGPASSWORD: postgres
-      PGDATABASE: todo
-      HOST: 0.0.0.0
-      PORT: 3001
+      DATABASE_URL: "postgresql://postgres:postgres@db:5432/todo?schema=public"
+      RUN_IN_DOCKER: "true"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     ports:
-      - "3001:3001"   # опционально, но удобно для проверки с хоста
-    expose:
-      - "3001"
-    command: sh -c "npx prisma migrate deploy && node dist/src/index.js"
+      - "3001:3001"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   web:
     build:
       context: ./web
+      dockerfile: Dockerfile
     environment:
-      - VITE_API_URL=http://host.docker.internal:3001
-      - VITE_DEV_HOST=localhost
+      VITE_API_TARGET: "http://api:3001"
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     ports:
-      - "3000:3000"    # nginx порт (внешний:внутренний)
-      - "5173:5173"    # vite dev server для HMR
+      - "5173:5173"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:5173"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 volumes:
   db_data:

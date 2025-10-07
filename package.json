@@ -19,14 +19,14 @@
     "logs:dev": "docker compose -f docker-compose.dev.yml logs -f",
     "check": "./check-system.sh",
     "install:deps": "./install-macos.sh",
-    "install:backend": "cd backend && npm install",
-    "install:frontend": "cd frontend && npm install",
-    "install:all": "npm run install:backend && npm run install:frontend",
-    "backend:dev": "cd backend && npm run dev",
-    "frontend:dev": "cd frontend && npm run dev",
-    "db:studio": "cd backend && npm run db:studio",
-    "db:migrate": "cd backend && npm run db:migrate",
-    "db:generate": "cd backend && npm run db:generate"
+    "install:api": "cd api && npm install",
+    "install:web": "cd web && npm install",
+    "install:all": "npm run install:api && npm run install:web",
+    "api:dev": "cd api && npm run dev",
+    "web:dev": "cd web && npm run dev",
+    "db:studio": "cd api && npm run db:studio",
+    "db:migrate": "cd api && npm run db:migrate",
+    "db:generate": "cd api && npm run db:generate"
   },
   "keywords": [
     "todo",

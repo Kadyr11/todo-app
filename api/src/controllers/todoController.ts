@@ -59,10 +59,10 @@ export async function getTodo(req: Request, res: Response) {
       return res.status(404).json({ message: "Not found" });
     }
 
-    res.json(item);
+    return res.json(item);
   } catch (err) {
     console.error("getTodo failed:", err);
-    res.status(500).json({ message: "Internal Server Error" });
+    return res.status(500).json({ message: "Internal Server Error" });
   }
 }
 
@@ -92,7 +92,7 @@ export async function createTodo(req: Request, res: Response) {
     res.status(201).json(item);
   } catch (err) {
     console.error("createTodo failed:", err);
-    res.status(500).json({ message: "Internal Server Error" });
+    return res.status(500).json({ message: "Internal Server Error" });
   }
 }
 
@@ -135,7 +135,7 @@ export async function updateTodo(req: Request, res: Response) {
     }
   } catch (err) {
     console.error("updateTodo failed:", err);
-    res.status(500).json({ message: "Internal Server Error" });
+    return res.status(500).json({ message: "Internal Server Error" });
   }
 }
 
@@ -159,7 +159,7 @@ export async function deleteTodo(req: Request, res: Response) {
     }
   } catch (err) {
     console.error("deleteTodo failed:", err);
-    res.status(500).json({ message: "Internal Server Error" });
+    return res.status(500).json({ message: "Internal Server Error" });
   }
 }
 
@@ -182,7 +182,7 @@ export async function restoreTodo(req: Request, res: Response) {
     }
   } catch (err) {
     console.error("restoreTodo failed:", err);
-    res.status(500).json({ message: "Internal Server Error" });
+    return res.status(500).json({ message: "Internal Server Error" });
   }
 }
 
